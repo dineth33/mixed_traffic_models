@@ -94,8 +94,6 @@ class IDM:
 
 
 
-
-
 class ACC:
     
     def __init__(self, v0, T, s0, a, b):

@@ -141,6 +141,8 @@ class MTM:
                 Parameters:
                     x: front position of the subjet vehicle
                     xl: front position of the leading vehicle 
+                    y: lat middle position of the subject vehicle 
+                    yl: lat middle position of the leader vehicle. 
                     vx: longitudinal speed of the subject vehicle 
                     vxl: longitudinal speed of the leading vehicle 
                     vy: lateral speed of the subject vehicle 
