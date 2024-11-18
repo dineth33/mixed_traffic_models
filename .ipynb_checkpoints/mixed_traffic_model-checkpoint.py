@@ -118,7 +118,7 @@ class MTM:
         ## Lateral Acceleration 
         ##############################################################
 
-    def calc_acc_lat_free(vy): 
+    def calc_acc_lat_free(self, vy): 
             
                 """
                 Calculate the free acceleration for lateral direction 
@@ -131,9 +131,9 @@ class MTM:
                 
                 """
             
-                return -vy/self.tau_lat_OVM        
+                return -vy/self.tau_lat_ovm        
 
-    def calc_acc_lat_int(self, x, xl, y, yl, vx, vxl, vy, vyl, axl, Lveh, L1, Weh, Wl, Wroad, logging): 
+    def calc_acc_lat_int(self, x, xl, y, yl, vx, vxl, vy, vyl, axl, Lveh, L1, Weh, Wl, Wroad): 
         
                 """
                 calculates the desired interaction lateral acceleration
@@ -166,7 +166,7 @@ class MTM:
                 acc_cf_int = self.long_model.calc_acc_int(sx, vx, vxl, axl)
         
                 dy = yl - y
-                sign_dl = -1 if dy < 0 else 1
+                sign_dy = -1 if dy < 0 else 1
                 Wavg = 0.5*(Weh+Wl)
         
                 overlap = (abs(dy) < Wavg)
@@ -192,23 +192,10 @@ class MTM:
                 else: 
                     mult_dv_factor = max(0,1-self.sens_dvy*sign_dy*(vyl-vy))
         
-                acc_lat_int = v0_lat_int / self.tau_lat_OVM*mult_dv_factor # this part is different from the orignal equation 
+                acc_lat_int = v0_lat_int / self.tau_lat_ovm*mult_dv_factor # this part is different from the orignal equation 
         
-                acc_lat_int = max(-self.acc_lat_int_max, min(self.acc_laat_int_max, acc_lat_int))
+                acc_lat_int = max(-self.acc_lat_int_max, min(self.acc_lat_int_max, acc_lat_int))
         
-                if logging:
-                    print("MTM.calcAccLatInt:",
-                          "x=", formd(x),
-                          "dx=", formd(dx),
-                          "y=", formd(y),
-                          "dy=", formd(dy),
-                          "vx=", formd(vx),
-                          "vy=", formd(vy),
-                          "accCFint=", formd(accCFint),
-                          "\n                     alpha=", formd(alpha),
-                          "mult_dv_factor=", formd(mult_dv_factor),
-                          "v0LatInt=", formd(v0LatInt),
-                          "accLatInt=", formd(accLatInt))
         
                 return acc_lat_int
 
