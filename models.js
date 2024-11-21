@@ -278,10 +278,10 @@ function MTM(longModel,s0y,s0yLat,s0yB,s0yLatB,sensLat,tauLatOVM,sensDvy){
 
   // fixed boundary parameters (see sim_straight.js for explanation)
   
-  this.accLatBMax=glob_accLatBMax;     
-  this.accLatBRef=glob_accLatBRef;
-  this.accLongBRef=glob_accLongBRef;
-  this.anticFactorB=glob_anticFactorB;
+  this.accLatBMax=glob_accLatBMax;        //max boundary lat accel, of the order of bmax     
+  this.accLatBRef=glob_accLatBRef;        //lateral acceleration if veh touches boundary
+  this.accLongBRef=glob_accLongBRef;      //longitudinal acceleration if veh touches boundary  
+  this.anticFactorB=glob_anticFactorB;    //antic time for boundary response (multiples of T)   
   
   this.nj=8; // number of discr. steps; 
              // max antic length approx 2*relLongAttenLen*sStop
@@ -695,7 +695,7 @@ MTM.prototype.calcAccB=function(widthLeft,widthRight,x,y,vx,vy,Wveh){
   }
 
   var v0y=(Math.abs(v0yBleft)>Math.abs(v0yBright)) ? v0yBleft : v0yBright;
-  var accLongB =this.accLongBRef*( - alphaLongLeftMax - alphaLongRightMax);
+  var accLongB =this.accLongBRef*(- alphaLongLeftMax - alphaLongRightMax);
   var accLatB0  =this.accLatBRef *( + alphaLatLeftMax  - alphaLatRightMax);
 
   accLongB *=vx/v0max; //OK
