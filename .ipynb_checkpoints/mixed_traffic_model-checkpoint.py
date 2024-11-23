@@ -36,22 +36,6 @@ class MTM:
         self.antic_factor_b = antic_factor_b
         self.nj = 8  # Number of discrete steps
 
-    def copy(self, mixed_model):
-        """
-        Copies the provided MTM instance attributes to the current instance.
-
-        Parameters:
-            mixed_model (MTM): The MTM instance to copy.
-        """
-        self.long_model = mixed_model.long_model.copy() if hasattr(mixed_model.long_model, 'copy') else mixed_model.long_model
-        self.s0y = mixed_model.s0y
-        self.s0y_b = mixed_model.s0y_b
-        self.s0y_lat = mixed_model.s0y_lat
-        self.s0y_lat_b = mixed_model.s0y_lat_b
-        self.sens_lat = mixed_model.sens_lat
-        self.tau_lat_ovm = mixed_model.tau_lat_ovm
-        self.sens_dvy = mixed_model.sens_dvy
-
     ##############################################################
     ## Longitudinal Acceleration 
     ##############################################################
@@ -141,6 +125,8 @@ class MTM:
                 Parameters:
                     x: front position of the subjet vehicle
                     xl: front position of the leading vehicle 
+                    y: lat middle position of the subject vehicle 
+                    yl: lat middle position of the leader vehicle. 
                     vx: longitudinal speed of the subject vehicle 
                     vxl: longitudinal speed of the leading vehicle 
                     vy: lateral speed of the subject vehicle 
@@ -265,6 +251,8 @@ class MTM:
             log = False 
         
             Tantic = self.antic_factor_b*(self.long_model.T)
+            
+            dTantic = 1*Tantic/self.nj
             dTantic = 0 
         
             alpha_long_left_max = 0
@@ -282,7 +270,7 @@ class MTM:
                 TTC = j*dTantic 
                 weight = exp(-TTC/Tantic)
                 sy_left = width_left*(x+vx*TTC) + y - 0.5*Wveh  # y positive to right
-                sy_right = width_right*(x*vx*TTC) -y - 0.5*Wveh # y corresp to vehicle.v
+                sy_right = width_right*(x+vx*TTC) -y - 0.5*Wveh # y corresp to vehicle.v
         
                 if (j > 0): 
         
@@ -305,8 +293,8 @@ class MTM:
             acc_long_b = self.acc_long_b_ref*(-alpha_long_left_max -alpha_long_right_max)
             acc_lat_b = self.acc_lat_b_ref*(alpha_lat_left_max - alpha_lat_right_max)
     
-            acc_long_b *= vx/v0max
-            acc_lat_b *= (0.2 + 0.8*vx)/v0max
+            acc_long_b *= vx/self.long_model.v0
+            acc_lat_b *= (0.2 + 0.8*vx)/self.long_model.v0
     
             acc_lat_b_restr = max(-self.acc_lat_b_max, min(self.acc_lat_b_max, acc_lat_b)) # rarely in effect#
     

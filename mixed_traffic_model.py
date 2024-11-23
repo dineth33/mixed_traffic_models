@@ -19,6 +19,7 @@ class MTM:
             sens_dvy (float): Sensitivity of lateral relative speed, similar to FVDM [s/m].
             acc_lat_b_max, acc_lat_b_ref, acc_long_b_ref, antic_factor_b: Global constants.
         """
+        
         self.long_model = long_model
         self.s0y = s0y
         self.s0y_b = s0y_b
@@ -35,22 +36,6 @@ class MTM:
         self.acc_long_b_ref = acc_long_b_ref
         self.antic_factor_b = antic_factor_b
         self.nj = 8  # Number of discrete steps
-
-    def copy(self, mixed_model):
-        """
-        Copies the provided MTM instance attributes to the current instance.
-
-        Parameters:
-            mixed_model (MTM): The MTM instance to copy.
-        """
-        self.long_model = mixed_model.long_model.copy() if hasattr(mixed_model.long_model, 'copy') else mixed_model.long_model
-        self.s0y = mixed_model.s0y
-        self.s0y_b = mixed_model.s0y_b
-        self.s0y_lat = mixed_model.s0y_lat
-        self.s0y_lat_b = mixed_model.s0y_lat_b
-        self.sens_lat = mixed_model.sens_lat
-        self.tau_lat_ovm = mixed_model.tau_lat_ovm
-        self.sens_dvy = mixed_model.sens_dvy
 
     ##############################################################
     ## Longitudinal Acceleration 
@@ -174,7 +159,8 @@ class MTM:
                 overlap = (abs(dy) < Wavg)
         
                 alpha = -sign_dy*(abs(dy)/Wavg if (overlap) else exp(abs(dy)-Wavg)/self.s0y_lat)  # we have an confusion here to get solved 
-        
+
+                # this part is to consider, when there are narrow gaps from the left side and the right side. 
                 if overlap == True:
         
                     sylb_right = 0.5*Wroad - yl - 0.5*Wl; # right gap leader and road boundary 
@@ -267,6 +253,8 @@ class MTM:
             log = False 
         
             Tantic = self.antic_factor_b*(self.long_model.T)
+            
+            dTantic = 1*Tantic/self.nj
             dTantic = 0 
         
             alpha_long_left_max = 0
@@ -284,7 +272,7 @@ class MTM:
                 TTC = j*dTantic 
                 weight = exp(-TTC/Tantic)
                 sy_left = width_left*(x+vx*TTC) + y - 0.5*Wveh  # y positive to right
-                sy_right = width_right*(x*vx*TTC) -y - 0.5*Wveh # y corresp to vehicle.v
+                sy_right = width_right*(x+vx*TTC) -y - 0.5*Wveh # y corresp to vehicle.v
         
                 if (j > 0): 
         
@@ -307,8 +295,8 @@ class MTM:
             acc_long_b = self.acc_long_b_ref*(-alpha_long_left_max -alpha_long_right_max)
             acc_lat_b = self.acc_lat_b_ref*(alpha_lat_left_max - alpha_lat_right_max)
     
-            acc_long_b *= vx/v0max
-            acc_lat_b *= (0.2 + 0.8*vx)/v0max
+            acc_long_b *= vx/self.long_model.v0
+            acc_lat_b *= (0.2 + 0.8*vx)/self.long_model.v0
     
             acc_lat_b_restr = max(-self.acc_lat_b_max, min(self.acc_lat_b_max, acc_lat_b)) # rarely in effect#
     
