@@ -19,6 +19,7 @@ class MTM:
             sens_dvy (float): Sensitivity of lateral relative speed, similar to FVDM [s/m].
             acc_lat_b_max, acc_lat_b_ref, acc_long_b_ref, antic_factor_b: Global constants.
         """
+        
         self.long_model = long_model
         self.s0y = s0y
         self.s0y_b = s0y_b
@@ -117,7 +118,7 @@ class MTM:
             
                 return -vy/self.tau_lat_ovm        
 
-    def calc_acc_lat_int(self, x, xl, y, yl, vx, vxl, vy, vyl, axl, Lveh, L1, Weh, Wl, Wroad): 
+    def calc_acc_lat_int(self, x, xl, y, yl, vx, vxl, vy, vyl, axl, Lveh, L1, Wveh, Wl, Wroad): 
         
                 """
                 calculates the desired interaction lateral acceleration
@@ -153,18 +154,19 @@ class MTM:
         
                 dy = yl - y
                 sign_dy = -1 if dy < 0 else 1
-                Wavg = 0.5*(Weh+Wl)
+                Wavg = 0.5*(Wveh+Wl)
         
                 overlap = (abs(dy) < Wavg)
         
                 alpha = -sign_dy*(abs(dy)/Wavg if (overlap) else exp(abs(dy)-Wavg)/self.s0y_lat)  # we have an confusion here to get solved 
-        
+
+                # this part is to consider, when there are narrow gaps from the left side and the right side. 
                 if overlap == True:
         
                     sylb_right = 0.5*Wroad - yl - 0.5*Wl; # right gap leader and road boundary 
                     sylb_left = Wroad - sylb_right - Wl # left gap leader and road boundary 
-                    too_narrow_right = (sylb_right< Wveh + self.s0y_latb)
-                    too_narrow_left = (sylb_left < Wveh + self.s0y_latb)
+                    too_narrow_right = (sylb_right< Wveh + self.s0y_lat_b)
+                    too_narrow_left = (sylb_left < Wveh + self.s0y_lat_b)
         
                     if not (too_narrow_right and too_narrow_left): 
         
