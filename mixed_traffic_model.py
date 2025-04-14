@@ -46,7 +46,7 @@ class MTM:
         Calculate the interaction acceleration for longitudinal direction 
         
         Parameters:
-            dx = distance between the leader and follower for horizontal
+            dx = distance between the leader and follower for horizontal, we input the real gap. 
             dy = distance between the leader and follower for the vertical
             vx = speed of subject vehicle 
             vxl = speed of the leader vehicle 
@@ -56,49 +56,14 @@ class MTM:
         Returns:  
             float: veh-veh longitudinal acceleration.
         """
-        sx = max(0, dx - Ll)
+        sx = dx 
         sy = abs(dy) - Wavg
-        acc_cf_int = self.long_model.calc_acc_int(sx, vx, vxl, axl)
-        alpha = min(exp(-sy/self.s0y), 1)
+        acc_cf_int = self.long_model.calc_acc_int(dx, vx, vxl, axl)
+        alpha = min(exp(-dy/self.s0y), 1)
         return alpha * acc_cf_int
 
 
-    def calc_acc_leader_select(self, dx, dy, vx, vxl, axl, Ll, Wavg):
-        
-            '''
-            Simplified calcAccLongInt to select leaders and followers
-            NOTE: Differences to calcAccLongInt:
-                  (i) take the maximum of long and lat attenuation because I select
-                       partners just on long acceleration!
-                  (ii) no special provision for laterally neighboring vehs:
-                       global.longParReductFactor
-                       (for selecting neighbors, just assume full long force)
-            '''
-        
-            """
-            Calculate the interaction acceleration for longitudinal direction 
-            
-            Parameters:
-                dx = distance between the leader and follower for horizontal
-                dy = distance between the leader and follower for the vertical
-                vx = speed of subject vehicle 
-                vxl = speed of the leader vehicle 
-                Ll = length of the leader 
-                Wavg = width average of leader and subject
-               
-            returns:  veh veh longitudinal acceleration 
-            
-            """
-        
-            sx = max(0, dx - Ll)
-            sy = abs(dy) - Wavg
-            s0ylarger = max(self.s0y, s0ylarger)
-        
-            acc_cf_int = self.long_model.calc_acc_int(sx, vx, vxl, axl)
-            alpha = min(exp(-sy/self.s0ylarger),1)
-        
-            return alpha*acc_cf_int
-    
+
         ##############################################################
         ## Lateral Acceleration 
         ##############################################################
@@ -118,14 +83,13 @@ class MTM:
             
                 return -vy/self.tau_lat_ovm        
 
-    def calc_acc_lat_int(self, x, xl, y, yl, vx, vxl, vy, vyl, axl, Lveh, L1, Wveh, Wl, Wroad): 
+    def calc_acc_lat_int(self, dx, y, yl, vx, vxl, vy, vyl, axl, Lveh, L1, Wveh, Wl, Wroad): 
         
                 """
                 calculates the desired interaction lateral acceleration
         
                 Parameters:
-                    x: front position of the subjet vehicle
-                    xl: front position of the leading vehicle 
+                    dx: distance between the leader and follower for horizontal, we input the real gap. 
                     y: lat middle position of the subject vehicle 
                     yl: lat middle position of the leader vehicle. 
                     vx: longitudinal speed of the subject vehicle 
@@ -139,7 +103,6 @@ class MTM:
                     W1: Width of the leading vehicle (imo)
                     Wroad: width of the road 
         
-                    dx: longitudinal distance =u[other vehicle]-u [m]
                     dy: lateral distance =v[other vehicle]-v [m]
                     sx: determined whether there is an overlap or not (0 for overlap, the gap between vehicles if not)
         
@@ -148,18 +111,17 @@ class MTM:
                 
                 """
         
-                dx = xl - x 
                 sx = max(0,dx)
+        
                 acc_cf_int = self.long_model.calc_acc_int(sx, vx, vxl, axl)
         
-                dy = yl - y
+                dy = yl - y # do we need to take the actual gap?? 
                 sign_dy = -1 if dy < 0 else 1
                 Wavg = 0.5*(Wveh+Wl)
         
                 overlap = (abs(dy) < Wavg)
         
                 alpha = -sign_dy*(abs(dy)/Wavg if (overlap) else exp(abs(dy)-Wavg)/self.s0y_lat)  # we have an confusion here to get solved 
-
                 # this part is to consider, when there are narrow gaps from the left side and the right side. 
                 if overlap == True:
         
@@ -333,8 +295,8 @@ class MTM:
             alpha_lat_left = self.alpha_lat_b_fun(sy_left)
             alpha_lat_right = self.alpha_lat_b_fun(sy_right)
             
-            acc_long_b = self.acc_long_b_ref*(-alpha_long_left_max -alpha_long_right_max) #  because we need both left and right to a single variable 
-            acc_lat_b = self.acc_lat_b_ref*(alpha_lat_left_max - alpha_lat_right_max)
+            acc_long_b = self.acc_long_b_ref*(-alpha_long_left -alpha_long_right) # because we need both left and right to a single variable 
+            acc_lat_b = self.acc_lat_b_ref*(alpha_lat_left - alpha_lat_right)
     
             acc_long_b *= vx/self.long_model.v0 # fits with the equation. 
             acc_lat_b *= (0.2 + 0.8*vx)/self.long_model.v0 

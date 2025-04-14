@@ -46,7 +46,7 @@ class MTM:
         Calculate the interaction acceleration for longitudinal direction 
         
         Parameters:
-            dx = distance between the leader and follower for horizontal
+            dx = distance between the leader and follower for horizontal, we input the real gap. 
             dy = distance between the leader and follower for the vertical
             vx = speed of subject vehicle 
             vxl = speed of the leader vehicle 
@@ -56,49 +56,14 @@ class MTM:
         Returns:  
             float: veh-veh longitudinal acceleration.
         """
-        sx = max(0, dx - Ll)
+        sx = dx 
         sy = abs(dy) - Wavg
-        acc_cf_int = self.long_model.calc_acc_int(sx, vx, vxl, axl)
-        alpha = min(exp(-sy/self.s0y), 1)
+        acc_cf_int = self.long_model.calc_acc_int(dx, vx, vxl, axl)
+        alpha = min(exp(-dy/self.s0y), 1)
         return alpha * acc_cf_int
 
 
-    def calc_acc_leader_select(self, dx, dy, vx, vxl, axl, Ll, Wavg):
-        
-            '''
-            Simplified calcAccLongInt to select leaders and followers
-            NOTE: Differences to calcAccLongInt:
-                  (i) take the maximum of long and lat attenuation because I select
-                       partners just on long acceleration!
-                  (ii) no special provision for laterally neighboring vehs:
-                       global.longParReductFactor
-                       (for selecting neighbors, just assume full long force)
-            '''
-        
-            """
-            Calculate the interaction acceleration for longitudinal direction 
-            
-            Parameters:
-                dx = distance between the leader and follower for horizontal
-                dy = distance between the leader and follower for the vertical
-                vx = speed of subject vehicle 
-                vxl = speed of the leader vehicle 
-                Ll = length of the leader 
-                Wavg = width average of leader and subject
-               
-            returns:  veh veh longitudinal acceleration 
-            
-            """
-        
-            sx = max(0, dx - Ll)
-            sy = abs(dy) - Wavg
-            s0ylarger = max(self.s0y, s0ylarger)
-        
-            acc_cf_int = self.long_model.calc_acc_int(sx, vx, vxl, axl)
-            alpha = min(exp(-sy/self.s0ylarger),1)
-        
-            return alpha*acc_cf_int
-    
+
         ##############################################################
         ## Lateral Acceleration 
         ##############################################################
@@ -118,14 +83,13 @@ class MTM:
             
                 return -vy/self.tau_lat_ovm        
 
-    def calc_acc_lat_int(self, x, xl, y, yl, vx, vxl, vy, vyl, axl, Lveh, L1, Wveh, Wl, Wroad): 
+    def calc_acc_lat_int(self, dx, y, yl, vx, vxl, vy, vyl, axl, Lveh, L1, Wveh, Wl, Wroad): 
         
                 """
                 calculates the desired interaction lateral acceleration
         
                 Parameters:
-                    x: front position of the subjet vehicle
-                    xl: front position of the leading vehicle 
+                    dx: distance between the leader and follower for horizontal, we input the real gap. 
                     y: lat middle position of the subject vehicle 
                     yl: lat middle position of the leader vehicle. 
                     vx: longitudinal speed of the subject vehicle 
@@ -139,7 +103,6 @@ class MTM:
                     W1: Width of the leading vehicle (imo)
                     Wroad: width of the road 
         
-                    dx: longitudinal distance =u[other vehicle]-u [m]
                     dy: lateral distance =v[other vehicle]-v [m]
                     sx: determined whether there is an overlap or not (0 for overlap, the gap between vehicles if not)
         
@@ -148,7 +111,6 @@ class MTM:
                 
                 """
         
-                dx = xl - x 
                 sx = max(0,dx)
                 acc_cf_int = self.long_model.calc_acc_int(sx, vx, vxl, axl)
         
@@ -218,7 +180,7 @@ class MTM:
             Calculate lateral attenuation factor for lateral boundary 
             
             Parameters:
-                sy: abs(dy) - Wavg: calculated in calc_acc_long_int
+                sy: abs(dy) - Wavg: calculated in calc_acc_long_int, we use the calculated value in the boundary function 
             
             returns: lateral attenuation factor for lateral boundary 
                  
@@ -230,6 +192,79 @@ class MTM:
                 alpha = 1 - sy/self.s0y_lat_b
         
             return alpha 
+
+
+    # def calc_acc_b(self, width_left, width_right, x, y, vx, vy, Wveh):
+        
+    #         """
+    #         Calculate lateral and longitudianl boundary effect for both lateral and longitudinal acceleration 
+            
+    #         Parameters:
+    #            width_left:  function pointer roadAxis-leftBd as a funct of arcLength u
+    #            width_right: same for rightBd-roadAxis
+    #            x = x position of the subejct 
+    #            y = y position of the subject 
+    #            vx = longitudinal speed of the subject   
+    #            vy = lateral speed of the subject
+    #            Wveh = width of the subject vehicle 
+            
+    #         returns: boundary effect for both lateral and longitudinal acceleration 
+                 
+    #         """    
+            
+    #         log = False 
+        
+    #         Tantic = self.antic_factor_b*(self.long_model.T) 
+            
+    #         dTantic = 1*Tantic/self.nj
+    #         dTantic = 0 ## !!! Test: no boundary anticipation. Reduces lateral wiggling
+        
+    #         alpha_long_left_max = 0
+    #         alpha_long_right_max = 0 
+    #         alpha_lat_left_max = 0 
+    #         alpha_lat_right_max = 0 
+        
+    #         v0y_b_left = 0 
+    #         v0y_b_right = 0 
+        
+    #         # loop over spatial anticipations dx_antic=x+vx*TTC: find max interaction
+        
+    #         for j in range(self.nj):
+        
+    #             TTC = j*dTantic 
+    #             weight = exp(-TTC/Tantic)  # always 1, since we do not have anticipation. 
+                
+    #             sy_left = width_left*(x+vx*TTC) + y - 0.5*Wveh  # y positive to right    # very big value 
+    #             sy_right = width_right*(x+vx*TTC) - y - 0.5*Wveh # y corresp to vehicle  # very big value. 
+        
+    #             if (j > 0): 
+        
+    #                 v0y_b_left = max(v0y_b_left, -sy_left / TTC) # become a very big value 
+    #                 v0y_b_right = min(v0y_b_right, sy_right/TTC)  # always become 0. 
+        
+    #             alpha_long_left = self.alpha_long_b_fun(sy_left)*weight
+    #             alpha_long_right = self.alpha_long_b_fun(sy_right)*weight
+    #             alpha_lat_left = self.alpha_lat_b_fun(sy_left)*weight
+    #             alpha_lat_right = self.alpha_lat_b_fun(sy_right)*weight
+        
+                
+    #             alpha_long_left_max = max(alpha_long_left,alpha_long_left_max )
+    #             alpha_long_right_max =  max(alpha_long_right,alpha_long_right_max )
+    #             alpha_lat_left_max = max(alpha_lat_left,alpha_lat_left_max )
+    #             alpha_lat_right_max =  max(alpha_lat_right, alpha_lat_right_max)
+                
+    #         v0y = v0y_b_left if (abs(v0y_b_left) > abs(v0y_b_right)) else v0y_b_right 
+            
+    #         acc_long_b = self.acc_long_b_ref*(-alpha_long_left_max -alpha_long_right_max) #  because we need both left and right to a single variable 
+    #         acc_lat_b = self.acc_lat_b_ref*(alpha_lat_left_max - alpha_lat_right_max)
+    
+    #         acc_long_b *= vx/self.long_model.v0 # fits with the equation. 
+    #         acc_lat_b *= (0.2 + 0.8*vx)/self.long_model.v0 
+    
+    #         acc_lat_b_restr = max(-self.acc_lat_b_max, min(self.acc_lat_b_max, acc_lat_b)) # rarely in effect#
+    
+    #         # return is changed from the original js code, since the main objective is to get acc long b and acc lat b 
+    #         return  acc_long_b, acc_lat_b
 
 
     def calc_acc_b(self, width_left, width_right, x, y, vx, vy, Wveh):
@@ -250,56 +285,22 @@ class MTM:
                  
             """    
             
-            log = False 
         
-            Tantic = self.antic_factor_b*(self.long_model.T)
+             # ursprüngliche gibt es plus oder minue für lecht und reciht, aber wir haben diese width in einem gleiche Wiese genommen. 
+            sy_left = width_left - 0.5*Wveh 
+            sy_right = width_right - 0.5*Wveh 
+        
+            alpha_long_left = self.alpha_long_b_fun(sy_left)
+            alpha_long_right = self.alpha_long_b_fun(sy_right)
+            alpha_lat_left = self.alpha_lat_b_fun(sy_left)
+            alpha_lat_right = self.alpha_lat_b_fun(sy_right)
             
-            dTantic = 1*Tantic/self.nj
-            dTantic = 0 
-        
-            alpha_long_left_max = 0
-            alpha_long_right_max = 0 
-            alpha_lat_left_max = 0 
-            alpha_lat_right_max = 0 
-        
-            v0y_b_left = 0 
-            v0y_b_right = 0 
-        
-            # loop over spatial anticipations dx_antic=x+vx*TTC: find max interaction
-        
-            for j in range(self.nj):
-        
-                TTC = j*dTantic 
-                weight = exp(-TTC/Tantic)
-                sy_left = width_left*(x+vx*TTC) + y - 0.5*Wveh  # y positive to right
-                sy_right = width_right*(x+vx*TTC) -y - 0.5*Wveh # y corresp to vehicle.v
-        
-                if (j > 0): 
-        
-                    v0y_b_left = max(v0y_b_left, -sy_left / TTC)
-                    v0y_b_right = min(v0y_b_left, sy_right/TTC)
-        
-                alpha_long_left = self.alpha_long_b_fun(sy_left)*weight
-                alpha_long_right = self.alpha_long_b_fun(sy_right)*weight
-                alpha_lat_left = self.alpha_lat_b_fun(sy_left)*weight
-                alpha_lat_right = self.alpha_lat_b_fun(sy_right)*weight
-        
-                
-                alpha_long_left_max = max(alpha_long_left,alpha_long_left_max )
-                alpha_long_right_max =  max(alpha_long_right,alpha_long_right_max )
-                alpha_lat_left_max = max(alpha_lat_left,alpha_lat_left_max )
-                alpha_lat_right_max =  max(alpha_lat_right, alpha_lat_right_max)
-                
-            v0y = v0y_b_left if (abs(v0y_b_left) > abs(v0y_b_right)) else v0y_b_right 
-            
-            acc_long_b = self.acc_long_b_ref*(-alpha_long_left_max -alpha_long_right_max)
-            acc_lat_b = self.acc_lat_b_ref*(alpha_lat_left_max - alpha_lat_right_max)
+            acc_long_b = self.acc_long_b_ref*(-alpha_long_left -alpha_long_right) # because we need both left and right to a single variable 
+            acc_lat_b = self.acc_lat_b_ref*(alpha_lat_left - alpha_lat_right)
     
-            acc_long_b *= vx/self.long_model.v0
-            acc_lat_b *= (0.2 + 0.8*vx)/self.long_model.v0
-    
-            acc_lat_b_restr = max(-self.acc_lat_b_max, min(self.acc_lat_b_max, acc_lat_b)) # rarely in effect#
-    
+            acc_long_b *= vx/self.long_model.v0 # fits with the equation. 
+            acc_lat_b *= (0.2 + 0.8*vx)/self.long_model.v0 
+        
             # return is changed from the original js code, since the main objective is to get acc long b and acc lat b 
             return  acc_long_b, acc_lat_b
                 
